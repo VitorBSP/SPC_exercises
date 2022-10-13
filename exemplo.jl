@@ -10,21 +10,33 @@ f.(2:0.1:3)
 # ] -> pkg mode
 # ctrl + C -> back to julia terminal
 
-using Plots, DataFrames, XLSX
+using Plots, DataFrames, XLSX, Statistics
 p = joinpath(@__DIR__, "GC.xlsx")
-xf = XLSX.readxlsx(p)
+xf = XLSX.readxlsx("GC.xlsx")
 xf
 XLSX.sheetnames(xf)
 sh = xf["Planilha1"]
 sh
 
-df = DataFrame(XLSX.readtable(p, "Planilha1"))
+df = DataFrame(XLSX.readtable("GC.xlsx", "Planilha1"))
+
 
 m = XLSX.readdata(p, "Planilha1!A1:K29")
 
 df
-m
-m = convert(Matrix{Float64}, m)
+f(x) = x + 2
 
-m = Matrix(sh)
-transpose(m)
+
+(df[:,:])
+
+df
+
+permutedims(df, 1)
+
+
+
+df = Float64.(df)
+
+
+t
+
