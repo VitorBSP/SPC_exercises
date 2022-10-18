@@ -1,0 +1,326 @@
+---
+title: "Trabalho 1"
+subtitle: "Controle Estatístico do Processo"
+author: "Vítor Pereira"
+format: 
+  pdf: 
+    include-in-header: 
+      text: |
+        \usepackage{float}
+    number-sections: true
+    keep-tex: true
+    fig-width: 5.9
+    fig-height: 2.9
+    indent: 2m
+    geometry:
+      - top=20mm
+      - left=18mm
+      - right=18mm
+      - heightrounded
+execute:
+  warning: false
+lang: pt
+---
+
+\section{Gráfico de Controle}
+
+Começaremos o trabalho analisando, dois tipos de gráficos de controle em que usam estimadores diferentes para os limites de controle, um utilizando a amplitude e outro utilizando o desvio padrão.
+
+\subsection{Dados via excel}
+
+```{julia}
+#| echo: false
+using Plots, DataFrames, XLSX, Statistics, CSV
+
+mean_line = mean.(eachrow(df))
+mean_of_mean_line = mean(mean_line)
+
+n = nrow(df)
+min_max = extrema.(eachrow(df))
+# min_line = minimum.(eachrow(df))
+# max_line = maximum.(eachrow(df))
+
+amplitude = []
+for (min, max) in min_max
+    append!(amplitude, [max - min])
+end
+
+amplitude_media = mean(amplitude)
+
+sd_line = std.(eachrow(df))
+
+sd_media = mean(sd_line)
+```
+
+
+As Figuras 1 e 2 são os gráficos de controle utilizando a amplitude. Em ambos podemos notar que apenas a amostra 14 está fora dos limites, abaixo do limite inferior.
+
+```{julia}
+#| label: fig1
+#| fig-cap: "Gráfico de controle da Média utilizando Amplitude"
+#| eval: true
+#| echo: false
+A_2 = 0.153
+lim_superior = mean_of_mean_line + (A_2*amplitude_media)
+lim_inferior = mean_of_mean_line - (A_2*amplitude_media)
+lim_inferior
+colorcond(x) = lim_inferior.<x.<lim_superior ? :black : :red
+gr(size = (800,600))
+scatter(mean_line, legend = false, color = colorcond.(mean_line))
+display(hline!([mean_of_mean_line, lim_inferior, lim_superior]))
+```
+
+
+```{julia}
+#| label: fig2
+#| fig-cap: "Gráfico de controle o desvio padrão utilizando Amplitude"
+#| echo: false
+d4 = 1.541
+d3 = 0.459
+lim_superior = d4*amplitude_media
+lim_inferior = d3*amplitude_media
+
+scatter(amplitude, legend = false, color = colorcond.(amplitude))
+hline!([amplitude_media, lim_inferior, lim_superior])
+```
+
+As Figuras 3 e 4, utilizam como estimador do limite o desvio padrão, nota-se que é menos rigoroso quanto a pontos fora de controle, onde a amostra 14 não está mais nessa condição. Na Figura 5, podemos afirmar essa afirmação visualmente, onde o limite superior tem valores maiores e o limite inferior tem valores menores quando são estimados pelo desvio padrão.
+
+```{julia}
+#| label: fig3
+#| fig-cap: "Gráfico de controle da Média utilizando desvio padrão"
+#| echo: false
+c4 = 4*(n-1)/(4*n-3)
+a3 = 3/(c4*sqrt(n))
+lim_superior = mean_of_mean_line + (a3*sd_media)
+lim_inferior = mean_of_mean_line - (a3*sd_media)
+
+scatter(mean_line, legend = false, color = colorcond.(mean_line))
+hline!([mean_of_mean_line, lim_inferior, lim_superior])
+```
+
+
+```{julia}
+#| label: fig4
+#| fig-cap: "Gráfico de controle o desvio padrão utilizando desvio padrão"
+#| echo: false
+d4 = round(3/(c4*sqrt(2*(n-1))),digits = 3)
+b3 = 1 - d4
+b4 = 1 + d4
+lim_superior = b4*sd_media
+lim_inferior = b3*sd_media
+
+scatter(sd_line, legend = false, color = colorcond.(sd_line))
+hline!([sd_media, lim_inferior, lim_superior])
+```
+
+
+```{julia}
+#| label: fig5
+#| fig-cap: "Gráfico de controle da Média utilizando desvio padrão e amplitude"
+#| echo: false
+
+A_2 = 0.153
+lim_superior_amplitude = mean_of_mean_line + (A_2*amplitude_media)
+lim_inferior_amplitude = mean_of_mean_line - (A_2*amplitude_media)
+
+c4 = 4*(n-1)/(4*n-3)
+a3 = 3/(c4*sqrt(n))
+lim_superior_sd = mean_of_mean_line + (a3*sd_media)
+lim_inferior_sd = mean_of_mean_line - (a3*sd_media)
+
+colorcond_unido(x) = ifelse(lim_inferior_amplitude.<x.<lim_superior_amplitude, 
+                    ifelse(lim_inferior_sd.<x.<lim_superior_sd,:black,:red), 
+                    ifelse(lim_inferior_sd.<x.<lim_superior_sd,:orange,:red))
+gr(size = (800,600))
+scatter(mean_line, legend = false, color = colorcond_unido.(mean_line))
+hline!([mean_of_mean_line, lim_superior_amplitude, lim_inferior_amplitude])
+hline!([lim_superior_sd, lim_inferior_sd])
+```
+
+\pagebreak
+
+\subsection{Trabalho Aula}
+No exemplo desenvolvido em aula temos um processo fora de controle, em que podemos notar vários pontos acima ou abaixo dos limites construídos. Assim, é possível dizer que a execução do trabalho ou cargo/função não está com a qualidade necessária para um bom desenvolvimento do produto ou outra atividade laboral. 
+
+```{julia}
+#| echo: false
+df1 = DataFrame(CSV.File("dados_aula.csv"))
+
+mean_line = mean.(eachrow(df1))
+mean_of_mean_line = mean(mean_line)
+
+n = nrow(df1)
+min_max = extrema.(eachrow(df1))
+# min_line = minimum.(eachrow(df))
+# max_line = maximum.(eachrow(df))
+
+amplitude = []
+for (min, max) in min_max
+    append!(amplitude, [max - min])
+end
+
+amplitude_media = mean(amplitude)
+
+sd_line = std.(eachrow(df1))
+
+sd_media = mean(sd_line)
+```
+
+As Figuras 6 e 7, também utilizam como estimador do limite a amplitude, onde é perceptível que quanto a média temos pontos fora de controle de maneira exarcebada, sendo inclusive a maioria em relação aos pontos em controle, no entanto, para o desvio padrão também temos alguns pontos fora de controle, no entanto de maneira mais contida,tem-se 5 pontos fora de controle, sendo dois deles novos em relação ao gráfico para média, a amostra 5 e a amostra 13. 
+
+As Figuras 8 e 9, utilizam o desvio padrão para construção dos limites, que como já notamos é menos rigoroso que a amplitude, assim nota-se uma pequena queda de pontos fora de controle de 13 na Figura 6 para 11 na Figura 8. No entanto, para o desvio padrão podemos notar que ocorre o efeito contrário aumenta de 4 para 5 as amostras fora de controle, quando o utilizamos a estimação dos limites pelo desvio padrão. Na figura 10, fica de forma mais explícita a diferença entre os limites.
+```{julia}
+#| label: fig6
+#| fig-cap: "Gráfico de controle da Média utilizando Amplitude - aula"
+#| eval: true
+#| echo: false
+A_2 = 0.153
+lim_superior = mean_of_mean_line + (A_2*amplitude_media)
+lim_inferior = mean_of_mean_line - (A_2*amplitude_media)
+colorcond(x) = lim_inferior.<x.<lim_superior ? :black : :red
+gr(size = (800,600))
+plot(mean_line, legend = false, color = :black)
+scatter!(mean_line, legend = false, color = colorcond.(mean_line))
+display(hline!([mean_of_mean_line, lim_inferior, lim_superior]))
+```
+
+
+```{julia}
+#| label: fig7
+#| fig-cap: "Gráfico de controle o desvio padrão utilizando Amplitude - aula"
+#| echo: false
+d4 = 1.541
+d3 = 0.459
+lim_superior = d4*amplitude_media
+lim_inferior = d3*amplitude_media
+
+plot(amplitude, legend = false, color = :black)
+scatter!(amplitude, legend = false, color = colorcond.(amplitude))
+hline!([amplitude_media, lim_inferior, lim_superior])
+```
+
+
+
+```{julia}
+#| label: fig8
+#| fig-cap: "Gráfico de controle da Média utilizando desvio padrão - aula"
+#| echo: false
+c4 = 4*(n-1)/(4*n-3)
+a3 = 3/(c4*sqrt(n))
+lim_superior = mean_of_mean_line + (a3*sd_media)
+lim_inferior = mean_of_mean_line - (a3*sd_media)
+
+plot(mean_line, legend = false, color = :black)
+scatter!(mean_line, legend = false, color = colorcond.(mean_line))
+hline!([mean_of_mean_line, lim_inferior, lim_superior])
+```
+
+
+```{julia}
+#| label: fig9
+#| fig-cap: "Gráfico de controle o desvio padrão utilizando desvio padrão - aula"
+#| echo: false
+d4 = round(3/(c4*sqrt(2*(n-1))),digits = 3)
+b3 = 1 - d4
+b4 = 1 + d4
+lim_superior = b4*sd_media
+lim_inferior = b3*sd_media
+plot(sd_line, legend = false, color = :black)
+scatter!(sd_line, legend = false, color = colorcond.(sd_line))
+hline!([sd_media, lim_inferior, lim_superior])
+```
+
+
+```{julia}
+#| label: fig10
+#| fig-cap: "Gráfico de controle da Média utilizando desvio padrão e amplitude - aula"
+#| echo: false
+
+A_2 = 0.153
+lim_superior_amplitude = mean_of_mean_line + (A_2*amplitude_media)
+lim_inferior_amplitude = mean_of_mean_line - (A_2*amplitude_media)
+
+c4 = 4*(n-1)/(4*n-3)
+a3 = 3/(c4*sqrt(n))
+lim_superior_sd = mean_of_mean_line + (a3*sd_media)
+lim_inferior_sd = mean_of_mean_line - (a3*sd_media)
+
+gr(size = (800,600))
+plot(mean_line, legend = false, color = :black)
+scatter!(mean_line, legend = false, color = colorcond_unido.(mean_line))
+
+hline!([mean_of_mean_line, lim_superior_amplitude, lim_inferior_amplitude])
+hline!([lim_superior_sd, lim_inferior_sd])
+```
+
+
+```{julia}
+#| echo: false
+df2 = DataFrame(CSV.File("medidas_individuais.csv"))
+df2
+
+df2.AM = [missing; abs.(diff(df2.Diametro))]
+
+mean_line = mean.(skipmissing.(eachcol(df2)))
+mean_diametro = mean_line[1]
+mean_AM = mean_line[2]
+n = nrow(df2)
+
+lim_superior = mean_diametro + 3*mean_AM/1.128
+lim_inferior = mean_diametro - 3*mean_AM/1.128
+```
+
+\pagebreak
+
+\section{Gráfico de controle para medidas individuais}
+
+Para os gráficos de controle para medidas individuais, expostos na Figura 11 e Figura 12, temos que todos os valores ficaram dentro dos limites. Assim, podemos afirmar que tudo está
+ocorrendo com a qualidade desejada, sem nenhum problema substancial a atividade que está sendo construído, assim é possível afirmar que as atividades estão ocorrendo sem nenhum padrão aleatório, logo dentro de controle.
+
+
+```{julia}
+#| label: fig11
+#| fig-cap: "Gráfico de controle para medidas individuais para o diâmetro"
+#| echo: false
+plot(df2.Diametro, legend = false, color = :black)
+scatter!(df2.Diametro, legend = false, color = colorcond.(df2.Diametro))
+hline!([mean_diametro, lim_inferior, lim_superior])
+```
+
+
+```{julia}
+#| label: fig12
+#| fig-cap: "Gráfico de controle para medidas individuais para a amplitude"
+#| echo: false
+lim_superior = 3.267*mean_AM
+lim_inferior = 0
+df2.AM[1] = NaN
+plot(df2.AM, legend = false, color = :black)
+scatter!(df2.AM, legend = false, color = colorcond.(df2.AM))
+hline!([mean_AM, lim_inferior, lim_superior])
+```
+
+
+```{julia}
+df3 = DataFrame(CSV.File("aula_boa.csv"));
+mean_line = mean.(eachrow(df3))
+mean_of_mean_line = mean(mean_line)
+
+n = nrow(df3)
+min_max = extrema.(eachrow(df3))
+
+
+amplitude = []
+for (min, max) in min_max
+    append!(amplitude, [max - min])
+end
+
+amplitude_media = mean(amplitude)
+
+sd_line = std.(eachrow(df))
+
+sd_media = mean(sd_line)
+
+
+```
