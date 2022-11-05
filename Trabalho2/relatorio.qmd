@@ -1,0 +1,236 @@
+---
+title: "Trabalho 2"
+subtitle: "Controle Estatístico do Processo"
+author: "Vítor Pereira"
+format: 
+  pdf: 
+    include-in-header: 
+      text: |
+        \usepackage{float}
+    number-sections: true
+    keep-tex: true
+    fig-width: 5.9
+    fig-height: 2.9
+    indent: 2m
+    geometry:
+      - top=20mm
+      - left=18mm
+      - right=18mm
+      - heightrounded
+execute:
+  warning: false
+  echo: false
+lang: pt
+---
+
+
+# Exercício 1
+
+Na @fig-1, construiu-se o gráfico de controle sem retirar observações individuais fora de controle. No entanto, na e @fig-2, a observação 29, onde observou-se na figura anterior que estava fora do controle e foi recalculado os limites. 
+
+Assim, a @fig-2 é o gráfico final, visto que ao retirar a observação fora de controle, o processo resultante ficou em controle, em nenhuma das figuras foi possível notar padrões de não aleatoriedade, obviamente com a exclusão da observação acima dos limites de controle.
+
+```{r}
+
+```
+
+
+
+## Letra A
+
+### Observações individuais
+```{julia}
+#| echo: false
+#| fig-cap: "Gráfico de controle para observações individuais da média de fibras em um lote."
+#| label: fig-1
+#| fig-pos: H
+using Plots, DataFrames, XLSX, Statistics, CSV
+
+
+graph_controle = function(dados, variavel, excluidos, media, li, ls; labx = "Amostras", laby = "Valor", limit = true)
+    colorcond(x) = li.<x.<ls ? :black : :red
+    limites = ls - media
+    dados = filter(row -> row[excluidos] == false, dados)
+    # filter(row -> dados[!, excluidos] == false, dados)
+    pontos = dados[!, variavel] 
+    if limit
+        plot(pontos, legend = false, color = :black)
+        scatter!(pontos, legend = false, color = colorcond.(pontos))
+        hline!([media, li, ls], color = "#000000")
+        hline!([media - (limites)*(2/3), media + (limites)*(2/3)], linestyle =:dash, color = "#555555")
+        hline!([media - (limites)*(1/3), media + (limites)*(1/3)], linestyle =:dashdot, color = "#AAAAAA")
+        xlabel!(labx)
+        ylabel!(laby)
+    else
+        plot(pontos, legend = false, color = :black)
+        scatter!(pontos, legend = false, color = colorcond.(pontos))
+        hline!([media, li, ls], color = "#000000")
+        xlabel!(labx)
+        ylabel!(laby)
+    end
+
+end;
+
+
+
+df1 = DataFrame(CSV.File("data/ex1.csv"));
+df1.AM = [missing; abs.(diff(df1.Fibra))];
+df1.excluido .= false;
+mean_fibra = mean(df1.Fibra);
+mean_am = 3*(mean(skipmissing(df1.AM)))/1.128;
+ls = mean_fibra + mean_am;
+li = mean_fibra - mean_am;
+
+graph_controle(df1, "Fibra", "excluido", mean_fibra, li, ls, laby = "Média de Fibras", labx = "Lotes")
+```
+
+
+```{julia}
+#| echo: false
+#| fig-cap: "Gráfico de controle para observações individuais da média de fibras em um lote com remoção de observações fora de controle."
+#| label: fig-2
+#| fig-pos: H
+df1[!, :excluido][(df1[!, :Fibra] .> ls) .| (df1[!, :Fibra] .< li)] .= true;
+mean_fibra1 = mean(df1[!, :Fibra][df1[!, :excluido] .== false]);
+df1.AM2 = [missing; missing; abs.(diff(df1[!, :Fibra][df1[!, :excluido] .== false]))];
+mean_am = 3*(mean(skipmissing(df1.AM2)))/1.128;
+ls = mean_fibra1 + mean_am;
+li = mean_fibra1 - mean_am;
+
+graph_controle(df1, "Fibra", "excluido", mean_fibra1, li, ls, laby = "Média de Fibras", labx = "Lotes")
+```
+
+### Amplitudes
+
+A @fig-3 e @fig-4 tem-se os gráficos de controles para amplitudes móveis. Na @fig-3, temos um ponto fora de controle no lote 7, assim na @fig-4 o gráfico foi construído reconsiderando a média e o limite sem o ponto fora de controle, semelhante ao que foi desenvolvido para @fig-2, a @fig-4 ficou como processo resultante, sem pontos fora de controle e sem indícios de não aleatoriedade.
+
+```{julia}
+#| echo: false
+#| fig-cap: "Gráfico de controle para amplitude móvies da fibras."
+#| label: fig-3
+#| fig-pos: H
+nanmean(x) = mean(filter(!isnan,x));
+df1.AM = [missing; abs.(diff(df1.Fibra))];
+df1.AM[1] = NaN;
+df1.excluido .= false;
+mean_am = nanmean(df1.AM);
+ls = 3.267*mean_am;
+li = 0;
+
+graph_controle(df1, "AM", "excluido", mean_am, li, ls, laby = "Amplitudes médias", labx = "Lotes", limit = false)
+```
+
+
+```{julia}
+#| echo: false
+#| fig-cap: "ráfico de controle para amplitude móvies da fibras com remoção de pontos fora de controle."
+#| label: fig-4
+#| fig-pos: H
+df1[!, :excluido][(df1[!, :AM] .> ls) .| (df1[!, :AM] .< li)] .= true;
+df1[!, :AM][df1[!, :excluido] .== true] .= NaN;
+mean_am = nanmean(df1.AM);
+ls = 3.267*mean_am;
+li = 0;
+
+graph_controle(df1, "AM", "excluido", mean_am, li, ls, laby = "Amplitudes médias", labx = "Lotes", limit = false)
+```
+
+
+```{julia}
+sd_fibra = std(df1.Fibra);
+cp = (9 - 8.6)/(6*sd_fibra;)
+cpk = min((9 - mean_fibra1)/(3*sd_fibra), (mean_fibra - 8.6) / (3*sd_fibra));
+```
+
+## Letra B
+Avaliando $C_p$ e $C_{pk}$ em relação à capacidade do processo, temos que:
+
+$C_p$ = ``julia round(cp, digits = 4)``, é menor que 1.33, assim temos evidência que o processo aceitável.
+
+$C_{pk}$ = ``julia round(cpk, digits = 4)``, é menor que 1.33, assim temos evidência que o processo aceitável.
+
+
+# Exercício 2
+
+## Letra A
+
+```{julia}
+graph_controle2 = function(dados, variavel, excluidos, media, li, ls; labx = "Amostras", laby = "Valor", limit = true)
+    colorcond(x) = ifelse.(ls .< x .< li, "red",  "black")
+    limites = ls .- media
+    dados.limite_superior1 = media .+ 1/3 .* limites
+    dados.limite_superior2 = media .+ 2/3 .* limites
+    dados.limite_inferior1 = media .- 1/3 .* limites
+    dados.limite_inferior2 = media .- 2/3 .* limites
+    # dados[!, :limite_superior1][(dados[!, :limite_superior1] .> 1)] .= 1
+    # dados[!, :limite_superior2][(dados[!, :limite_superior2] .> 1)] .= 1
+    # dados[!, :limite_inferior1][(dados[!, :limite_inferior1] .< 0)] .= 0
+    # dados[!, :limite_inferior2][(dados[!, :limite_inferior2] .> 0)] .= 0
+
+    dados = filter(row -> row[excluidos] == false, dados)
+    # filter(row -> dados[!, excluidos] == false, dados)
+    pontos = dados[!, variavel] 
+    if limit
+        plot(pontos, legend = false, color = :black)
+        scatter!(pontos, legend = false, color = colorcond(pontos))
+        hline!([media], color = "#000000")
+        plot!(li, color = "#000000", linetype=:steppre)
+        plot!(ls, color = "#000000", linetype=:steppost)
+        plot!(dados.limite_superior1, linestyle =:dashdot, color = "#AAAAAA", linetype=:steppost)
+        plot!(dados.limite_inferior1, linestyle =:dashdot, color = "#AAAAAA", linetype=:steppre)
+        plot!(dados.limite_superior2, linestyle =:dash, color = "#555555", linetype=:steppost)
+        plot!(dados.limite_inferior2, linestyle =:dash, color = "#555555", linetype=:steppre)
+        xlabel!(labx)
+        ylabel!(laby)
+    else
+        plot(pontos, legend = false, color = :black)
+        scatter!(pontos, legend = false, color = colorcond.(pontos))
+        hline!([media, li, ls], color = "#000000")
+        xlabel!(labx)
+        ylabel!(laby)
+    end
+
+end;
+```
+
+Na @fig-5 temos o gráfico U para o número de artigos com anomalia em um recipiente, seleciono-se o gráfico U, pois estamos interassados no número de anomalias e não na proporção, outro fator para não escolha de outros gráficos é o fato de as amostras serem desbalanceadas (tamanho diferente). Assim também não foi verificado nenhuma observação fora de controle e não há evidência de não aleatoriedade.
+
+```{julia}
+#| echo: false
+#| fig-cap: "Gráfico de controle U para o número de artigos com anomalia."
+#| label: fig-5
+#| fig-pos: H
+df2 = DataFrame(CSV.File("data/ex2.csv"));
+df2.prop1 = round.(df2.Anomalias./df2.Recepientes, digits = 4);
+df2.prop2 = round.(df2.Nao_conf./df2.Recepientes, digits = 4);
+m1 = mean(df2.prop1);
+m2 = mean(df2.prop2);
+me = 3*sqrt.(m1./df2.Recepientes);
+li = m1 .- me;
+ls = m1 .+ me;
+df2.excluido .= false;
+graph_controle2(df2, "prop1", "excluido", m1, li, ls, labx = "Número", laby = "Média de Anomalias")
+```
+
+
+
+## Letra B
+
+Na @fig-6 temos o gráfico U para o número de artigos com anomalias não conformes em um recipiente. A justificativa para escolha do gráfico U é a mesma para a @fig-5, estamos interassados no número de anomalias e não na proporção, ainda temos amostras desbalanceadas (tamanho diferente). Assim também não foi verificado nenhuma observação fora de controle e não há evidência de não aleatoriedade.
+
+```{julia}
+me = 3*sqrt.(m2 ./ (df2.Recepientes));
+```
+
+
+```{julia}
+#| echo: false
+#| fig-cap: "Gráfico de controle U para o número de artigos com anomalias não conformes."
+#| label: fig-6
+#| fig-pos: H
+
+li = m2 .- me;
+ls = m2 .+ me;
+df2.excluido .= false;
+graph_controle2(df2, "prop2", "excluido", m2, li, ls, labx = "Número", laby = "Média de Anomalias")
+```

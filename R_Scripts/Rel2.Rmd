@@ -1,0 +1,271 @@
+---
+title: "Relatório 2 - CEP"
+author: "João Inácio Scrimini - 201812400"
+header-includes:
+   - \usepackage[brazil]{babel}
+   - \usepackage{bm}
+   - \usepackage{float}
+geometry: left=1.7cm, right=1.7cm, top=3cm, bottom=3cm
+output:
+  bookdown::pdf_document2:
+editor_options:
+  chunk_output_type: console
+indent: true
+---
+
+\clearpage
+
+
+```{r setup,include=F}
+
+options(digits = 4)  
+options(scipen = 999)
+options(OutDec=",")
+ggplot2::theme_set(ggplot2::theme_minimal())
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, fig.pos = "H",
+  fig.align = "center", fig.width = 6, fig.height = 3.5
+)
+scale_fill_discrete <- \(...) ggplot2::scale_fill_brewer(..., palette = "Set2")
+
+library(tidyverse)
+
+# Gráfico simples ----
+g_controle<-function(vari,lsc,lic,lm,labx="Amostras",laby="Valor",limit=T){
+  n<-1:length(vari)
+  lic1 = (lm + (1/3*(lic-lm)))
+  lic2 = (lm + (2/3*(lic-lm)))
+  lsc1 = (lm + (1/3*(lsc-lm)))
+  lsc2 = (lm + (2/3*(lsc-lm)))
+  graf<-data.frame(vari,n,lsc,lic,lm,lic1,lic2,lsc1,lsc2)
+  graf1<-graf |> 
+    mutate(fora=case_when(
+      vari >= lsc | vari<= lic ~ vari
+    ))
+  if(limit==T){
+    g<-ggplot(graf1) +
+      geom_hline(yintercept=lsc1,linetype="longdash",colour = "gray",size = 0.3,data = graf1)+
+      geom_hline(yintercept=lic1,linetype="longdash",colour = "gray",size = 0.3,data = graf1)+
+      geom_hline(yintercept=lsc2,linetype="longdash",colour = "gray",size = 0.3,data = graf1)+
+      geom_hline(yintercept=lic2,linetype="longdash",colour = "gray",size = 0.3,data = graf1)+
+      geom_hline(yintercept=lsc,size = 0.6,data = graf1,colour = "gray")+
+      geom_hline(yintercept=lic,size = 0.6,data = graf1,colour = "gray")+
+      geom_hline(yintercept=lm,size = 0.4,data = graf1,colour = "gray")+
+      geom_line(aes(x = n, y = vari),size = 0.5, colour = "black")+
+      geom_point(aes(x = n, y = vari),shape = "circle", size = 1.5L,colour = "black") +
+      geom_point(aes(x = n, y = fora),shape = "circle", size = 1.5L,colour = "red") +
+      labs(x = labx, y = laby) +
+      scale_y_continuous(breaks = round(c(lsc,lic,lm,lic1,lic2,lsc1,lsc2),3),)+
+      theme_classic()
+  }else{
+    g<-ggplot(graf1) +
+      geom_hline(yintercept=lsc,size = 0.6,data = graf1,colour = "gray")+
+      geom_hline(yintercept=lic,size = 0.6,data = graf1,colour = "gray")+
+      geom_hline(yintercept=lm,size = 0.4,data = graf1,colour = "gray")+
+      geom_line(aes(x = n, y = vari),size = 0.5, colour = "black")+
+      geom_point(aes(x = n, y = vari),shape = "circle", size = 1.5L,colour = "black") +
+      geom_point(aes(x = n, y = fora),shape = "circle", size = 1.5L,colour = "red") +
+      labs(x = labx, y = laby) +
+      scale_y_continuous(breaks = round(c(lsc,lic,lm,lic1,lic2,lsc1,lsc2),3),)+
+      # annotate("label", x=c(0,0,0), y = c(lsc,lm,lic), label = c("LSC","LM","LIC"),hjust=c(0.2,0.2,0.2))+
+      theme_classic()
+  }
+  return(g)
+}
+
+# Gráfico para amostras diferentes ----
+g_controle2<-function(vari,lsc,lic,lm,labx="Amostras",laby="Valor",limit=T){
+  n<-1:length(vari)
+  lic1 = (lm + (1/3*(lic-lm)))
+  lic2 = (lm + (2/3*(lic-lm)))
+  lsc1 = (lm + (1/3*(lsc-lm)))
+  lsc2 = (lm + (2/3*(lsc-lm)))
+  lic1[lic1 < 0] <- 0
+  lic2[lic2 < 0] <- 0
+  lic[lic < 0] <- 0
+  lsc1[lsc1 > 1] <- 1
+  lsc2[lsc2 > 1] <- 1
+  lsc[lsc > 1] <- 1
+  graf<-data.frame(vari,n,lsc,lic,lm,lic1,lic2,lsc1,lsc2)
+  graf1<-graf |> 
+    mutate(fora=case_when(
+      vari >= lsc | vari<= lic ~ vari
+    ))
+  if(limit==TRUE){
+    g<-ggplot(graf1) +
+      geom_step(aes(x = n, y = lsc1),linetype="longdash",colour = "gray",size = 0.3,data = graf1)+
+      geom_step(aes(x = n, y = lic1),linetype="longdash",colour = "gray",size = 0.3,data = graf1)+
+      geom_step(aes(x = n, y = lsc2),linetype="longdash",colour = "gray",size = 0.3,data = graf1)+
+      geom_step(aes(x = n, y = lic2),linetype="longdash",colour = "gray",size = 0.3,data = graf1)+
+      geom_step(aes(x = n, y = lsc),size = 0.6,data = graf1,colour = "gray")+
+      geom_step(aes(x = n, y = lic),size = 0.6,data = graf1,colour = "gray")+
+      geom_line(aes(x = n, y = lm),size = 0.4,data = graf1,colour = "gray")+
+      geom_line(aes(x = n, y = vari),size = 0.5, colour = "black")+
+      geom_point(aes(x = n, y = vari),shape = "circle", size = 1.5L,colour = "black") +
+      geom_point(aes(x = n, y = fora),shape = "circle", size = 1.5L,colour = "red") +
+      labs(x = labx, y = laby) +
+      scale_y_continuous(breaks = round(c(mean(lsc),mean(lic),mean(lm),mean(lic1),mean(lic2),mean(lsc1),mean(lsc2)),3),)+
+      scale_x_continuous(breaks = seq(0,100,2))+
+      theme_classic()
+  }else{
+    g<-ggplot(graf1) +
+      geom_step(aes(x = n, y = lsc),colour = "gray",size = 0.6,data = graf1)+
+      geom_step(aes(x = n, y = lic),colour = "gray",size = 0.6,data = graf1)+
+      geom_line(aes(x = n, y = lm),colour = "gray",size = 0.4,data = graf1)+
+      geom_line(aes(x = n, y = vari),size = 0.5, colour = "black")+
+      geom_point(aes(x = n, y = vari),shape = "circle", size = 1.5L,colour = "black") +
+      geom_point(aes(x = n, y = fora),shape = "circle", size = 1.5L,colour = "red") +
+      labs(x = labx, y = laby) +
+      scale_y_continuous(breaks = round(c(mean(lsc),mean(lic),mean(lm),mean(lic1),mean(lic2),mean(lsc1),mean(lsc2)),3),)+
+      # annotate("label", x=c(0,0,0), y = c(lsc,lm,lic), label = c("LSC","LM","LIC"),hjust=c(0.2,0.2,0.2))+
+      scale_x_continuous(breaks = seq(0,100,2))+
+      theme_classic()
+  }
+  return(g)
+}
+```
+
+# Exercício 1
+## a)
+Nas Figura \ref{fig:g1} e \ref{fig:gcont} podemos observar os gráficos de controles para as observações individuais. Para o primeiro foi apenas calculado os limites sem retirar nenhum ponto fora de controle, já no segundo gráfico foi retirado o ponto 29 que apresentou-se fora do controle e recalculado os limites. Como ao retirar esse ponto o processo ficou em controle, foi substituido os limites calculados para todos os dados, como é visto na Figura \ref{fig:gcont}. Os gráficos não apresentaram nenhum padrão de não aleatoriedade, com a exceção do ponto fora de controle.
+
+As Figuras \ref{fig:g2} e \ref{fig:gcont2} apresentam os gráficos de controles para as amplitudes móveis. Da mesma forma apresentada antes, ocorreu ponto fora de controle como visto no primeiro gráfico, então no segundo gráfico foi recalculado os limites retindo esse ponto, assim com os novos limites no controle foi plotado as observações completas novamente no gráfico, apresentando o gráfico com os limites no controle.
+
+
+
+```{r g1, fig.cap="Gráfico de controle para observações individuais."}
+# Exercicio 1: -----------------------------------------------------------------
+dados1<-data.frame(
+  Fibra = c(8.81, 8.76, 8.83, 8.87, 8.86, 8.92, 8.70, 8.83, 8.86, 8.77, 8.79, 8.73, 
+            8.77, 8.88, 8.83, 8.72, 8.79, 8.81, 8.87, 8.78, 8.75, 8.80, 8.88, 8.80,
+            8.76, 8.78, 8.91, 8.88, 8.99, 8.83, 8.74, 8.77, 8.84, 8.86, 8.90, 8.78,
+            8.80, 8.78, 8.80, 8.85, 8.74, 8.78, 8.75, 8.76)
+         )
+dados1$AM<-c(NA,abs(diff(dados1$Fibra)))
+# Medias individuais
+LM <- mean(dados1$Fibra)
+LSC <- LM + (3*(mean(dados1$AM,na.rm = T)/1.128))
+LIC <- LM - (3*(mean(dados1$AM,na.rm = T)/1.128))
+
+g_controle(vari = dados1$Fibra,lsc = LSC,lic = LIC,lm = LM,laby = "Fibras médias",limit = T)
+```
+
+```{r gcont, fig.cap="Gráfico de controle para observações individuais com limites no controle." }
+dados1$AM2<-c(NA,NA,abs(diff(dados1$Fibra[-29])))
+# Medias individuais
+LM <- mean(dados1$Fibra[-29])
+LSC <- LM + (3*(mean(dados1$AM2,na.rm = T)/1.128))
+LIC <- LM - (3*(mean(dados1$AM2,na.rm = T)/1.128))
+
+g_controle(vari = dados1$Fibra,lsc = LSC,lic = LIC,lm = LM,laby = "Fibras médias",limit = T)
+```
+
+
+```{r g2, fig.cap="Gráfico de controle para amplitude móveis."}
+LM1<-mean(dados1$AM,na.rm = T)
+LSC1<-3.267*LM1
+LIC1<-0
+
+g_controle(vari = dados1$AM,lsc = LSC1,lic = LIC1,lm = LM1,laby = "Amplitudes médias",limit = F)
+
+sd<-sd(dados1$Fibra)
+```
+
+```{r gcont2, fig.cap="Gráfico de controle para amplitude móveis com limites no controle."}
+
+dadosAM<-dados1$AM[-7]
+LM1<-mean(dadosAM,na.rm = T)
+LSC1<-3.267*LM1
+LIC1<-0
+
+g_controle(vari = dados1$AM,lsc = LSC1,lic = LIC1,lm = LM1,laby = "Amplitudes médias",limit = F)
+
+```
+
+
+## b)
+
+
+```{r,include=TRUE,echo=TRUE}
+cp <- (9.0-8.6)/(6*sd) 
+Cpk <- min(c(((9.0-LM)/(3*sd))),((LM-8.6)/(3*sd)))
+```
+\ \par
+$C_p = 1,101$. Portanto, está entre $1 \leq C_p < 1,33$, sendo considerado o processo aceitável.
+
+$C_{pk} = 1,06$. Portanto, está entre $1 \leq C_{pk} < 1,33$, sendo considerado o processo aceitável.
+
+
+
+
+
+# Exercício 2
+
+```{r}
+# Exercicio 2: -----------------------------------------------------------------
+dados2<-data.frame(
+  Recepientes = c(60, 55, 75, 65, 70, 65, 60, 80, 75, 70, 60, 60, 75, 55, 80, 70, 80, 75),
+  Anomalias = c(16, 10, 16, 18, 13, 9, 12, 14, 17, 8, 5, 8, 9, 5, 11, 6, 7, 10),
+  Nao_conf = c(9, 6, 10, 10, 6, 4, 9, 7, 8, 5, 4, 6, 3, 2, 5, 4, 3, 6)
+  )
+```
+
+
+```{r}
+dados2$prop1<-round(dados2$Anomalias/dados2$Recepientes,4)
+dados2$prop2<-round(dados2$Nao_conf/dados2$Anomalias,4)
+pm1<-mean(dados2$prop1)
+pm2<-mean(dados2$prop2)
+```
+
+## a)
+
+A Figura \ref{fig:g3} apresenta o gráfico de controle U para o número de anomalias nos recepientes. Por conta da empresa estar interessada em monitorar/controlar o número de anomalias e não a proporção, e como as amostras apresentam tamanhos diferentes, foi selecionado o gráfico U, por ser o mais apropriado para esse caso. Pelo gráfico conseguimos visualizar inicialmente que não apresentam pontos fora dos limites, pela decisão em cartas de controle não foi identificado nenhum tipo de não aleatoriedade. Portanto, o processo está dentro do controle.
+
+```{r g3, fig.cap="Gráfico de controle U para o número de anomalias registradas nos recipientes."}
+# Gráfico U
+u <- dados2$Anomalias/dados2$Recepientes
+UM <- mean(u)
+me <- 3*sqrt((UM/dados2$Recepientes))
+LSC <- UM + me
+LIC <- UM - me
+
+g_controle2(vari = u,lsc = LSC,lic = LIC,lm = UM,laby = "Anomalias",limit = T)
+
+
+# # Grafico p
+# me<- 3*sqrt((pm1*(1-pm1))/dados2$Recepientes)
+# LSC <- pm1 + me
+# LIC <- pm1 - me
+# 
+# g_controle2(vari = dados2$prop1,lsc = LSC,lic = LIC,lm = pm1,laby = "Proporções de Anomalias ",cal = "mean")
+
+```
+
+
+## b)
+
+Na Figura \ref{fig:g4} observamos o gráfico de controle U para o número de recipientes com anomalias (não conformes). Por conta da empresa estar interessada em monitorar/controlar o número de recipientes com anomalias (não conformes) e não a proporção, e como as amostras apresentam tamanhos diferentes, foi selecionado o gráfico U, por ser o mais apropriado para esse caso. Inicialmente vemos que não apresenta pontos fora dos limites, e pela decisão em cartas de controle não foi identificado nenhum tipo de não aleatoriedade. Portanto, o processo está dentro do controle.
+
+```{r g4, fig.cap="Gráfico de controle U para o número de recipientes com anomalias (não conformes)."}
+# Gráfico U
+u <- dados2$Nao_conf/dados2$Recepientes
+UM <- mean(u)
+me <- 3*sqrt((UM/dados2$Recepientes))
+LSC <- UM + me
+LIC <- UM - me
+
+g_controle2(vari = u,lsc = LSC,lic = LIC,lm = UM,laby = "Anomalias não conformes",limit = T)
+
+# # Grafico p
+# me<- 3*sqrt((pm2*(1-pm2))/dados2$Anomalias)
+# LSC <- pm2 + me
+# LIC <- pm2 - me
+# 
+# g_controle2(vari = dados2$prop2,lsc = LSC,lic = LIC,lm = pm2,laby = "Proporções de Anomalias (não conformes)",cal = "mean")
+
+```
+
+
+
+
