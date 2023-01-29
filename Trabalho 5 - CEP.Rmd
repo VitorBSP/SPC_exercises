@@ -1,0 +1,277 @@
+---
+title: "Trabalho 5 - Controle Estatístico do Procesos"
+author: "Vítor Bernardo Silveira Pereira"
+header-includes:
+   - \usepackage[brazil]{babel}
+   - \usepackage{bm}
+   - \usepackage{float}
+   - \usepackage{multirow}
+geometry: left=1.7cm, right=1.7cm, top=3cm, bottom=3cm
+output:
+  bookdown::pdf_document2:
+editor_options:
+  chunk_output_type: console
+indent: false
+toc: false
+---
+
+```{r setup,include=F}
+library(tidyverse)
+ggplot2::theme_set(ggplot2::theme_classic())
+knitr::opts_chunk$set(
+  echo = F, message = F, warning = F, fig.pos = "H",
+  fig.align = "center", fig.width = 6, fig.height = 3
+)
+source("g_controle.R")
+```
+
+
+# Questão 1
+
+## a) Use esses dados para construir um gráfico das observações individuais e um gráfico de amplitude móvel. O processo exibe controle estatístico?
+
+Notamos pela Figura 1 que o processo se encontra dentro de controle, com todas 
+as amplitudes dentro dos limites das amplitudes móveis. Na Figura 2 
+também temos as observações individuais dentro dos limites definidos.
+
+```{r}
+Dados<-data.frame(obs=c(18.7, 20.0, 21.0, 21.6, 18.1, 20.8, 18.4, 19.4, 16.6, 19.1, 18.6, 17.4, 18.2, 17.5, 19.0))
+Dados$AM<-c(NA,abs(diff(Dados$obs)))
+```
+
+```{r}
+# Medias individuais
+LM<-mean(Dados$obs)
+LSC<-LM+(3*(mean(Dados$AM,na.rm = T)/1.128))
+LIC<-LM-(3*(mean(Dados$AM,na.rm = T)/1.128))
+#--------------------------------------------#
+# Amplitude móvel
+LM1<-mean(Dados$AM,na.rm = T)
+LSC1<-3.267*mean(Dados$AM,na.rm = T)
+LIC1<-0
+```
+
+```{r,fig.cap="Gráfico de controle das observações com Amplitude Móvel."}
+g_controle(vari = Dados$AM,lsc = LSC1,lic = LIC1,lm = LM1,laby = "Amplitudes médias",cal = "")
+```
+
+```{r, fig.cap="Gráfico de controle das observações com Observações Inviduais."}
+g_controle(vari = Dados$obs,lsc = LSC,lic = LIC,lm = LM,laby = "Observações individuais")
+```
+
+
+## b) Utilizando os critérios suplementares verifique se o processo está sob controle. Qual sua conclusão?
+
+Conforme observado pelas Figuras 1 e 2, com o as medidas ficando dentro dos limites
+e mesmo com os 9 critérios suplementaremos não é possível identificar nenhum 
+padrão de não aleatoriedade, assim podemos dizer que o processo está sob controle.
+
+
+\subsection{c) Dados que $\mu_{\theta}$ = 20,0; $\sigma$ =1; L = 2,8 e $\lambda$ = 0,2 construa o gráfico EWMA. Qual sua conclusão:}
+
+Utilizando o gráfico EWMA, conforme podemos ver pela Figura 3, temos que na
+observação 9, o processo saí de controle, pois passa pelo limite inferior.
+
+```{r,fig.cap="Gráfico de Controle: EWMA."}
+# Gráfico EWMA
+Z<-NULL
+Z[1]<-m_0<-20.0
+sd<-1
+L<-2.8
+lamb<-0.2
+
+for (i in 2:(length(Dados$obs)+1)) {
+  Z[i]<-(lamb*Dados$obs[i-1])+((1-lamb)*Z[i-1])
+}
+Dados$Z<-Z[2:(length(Dados$obs)+1)]
+
+LSC<-LIC<-NULL
+for (i in 1:length(Dados$obs)) {
+  LSC[i]<-m_0 + (L*sd*sqrt((lamb/(2-lamb))*(1-(1-lamb)^(2*i))))
+  LIC[i]<-m_0 - (L*sd*sqrt((lamb/(2-lamb))*(1-(1-lamb)^(2*i))))
+}
+
+Dados$LM<-m_0
+Dados$LSC<-LSC
+Dados$LIC<-LIC
+Dados$n<-1:length(Dados$obs)
+Dados<- Dados |> 
+    mutate(fora=case_when(
+      Z >= LSC | Z <= LIC ~ Z
+    ))
+
+ggplot(Dados) +
+  geom_line(aes(x = n, y = LM),size = 0.5, colour = "#333333")+
+  geom_line(aes(x = n, y = LSC),size = 0.6, colour = "#333333")+
+  geom_line(aes(x = n, y = LIC),size = 0.6, colour = "#333333")+
+  geom_line(aes(x = n, y = Z),size = 0.5, colour = "black")+
+  geom_point(aes(x = n, y = Z),shape = 16, size = 1.5L,colour = "black") +
+  geom_point(aes(x = n, y = fora),shape = 16, size = 1.5L,colour = "orange") +
+  labs(x = "Observações", y = "Média móvel") +
+  theme_classic()
+
+```
+
+## d) Dados k = 0.5 e h = 5 construa o gráfico CUSUM qual sua conclusão?
+
+Com o gráfico de controle CUSUM, representado pela Figura 4, temos que a linha 
+superior é o CUSUM unilateral superior e linha inferior é o CUSUM unilateral 
+inferior. Assim, podemos dizer que a linha inferior, posterior a amostra 10, 
+o processo saiu de controle.
+
+```{r, fig.cap="Gráfico de Controle: CUSUM."}
+# Gráfico de CUSUM
+
+k = 1/2 
+h = 5
+
+SH<-SL<-NULL
+SH[1]<-SL[1]<-0
+  
+for (i in 2:(length(Dados$obs)+1)) {
+SH[i]<-max(0,(Dados$obs[i-1]-(m_0+k)+SH[i-1]))
+SL[i]<-max(0,((m_0-k)-Dados$obs[i-1]+SL[i-1]))
+}
+
+Dados$SH<-SH[2:(length(Dados$obs)+1)]
+Dados$SL<--SL[2:(length(Dados$obs)+1)]
+
+
+Dados<- Dados |> 
+    mutate(fora2=case_when(
+      SH >= h ~ SH
+    ),
+    fora3=case_when(
+      SL <= -h  ~ SL
+    ))
+
+ggplot(Dados) +
+  geom_line(aes(x = n, y = 0),size = 0.5, colour = "#333333")+
+  geom_line(aes(x = n, y = h),size = 0.6, colour = "#333333")+
+  geom_line(aes(x = n, y = -h),size = 0.6, colour = "#333333")+
+  geom_line(aes(x = n, y = SH),size = 0.5, colour = "black")+
+  geom_point(aes(x = n, y = SH),shape = "circle", size = 1.5L,colour = "black") +
+  geom_point(aes(x = n, y = fora2),shape = "circle", size = 1.5L,colour = "red") +
+  geom_line(aes(x = n, y = SL),size = 0.5, colour = "black")+
+  geom_point(aes(x = n, y = SL),shape = "circle", size = 1.5L,colour = "black") +
+  geom_point(aes(x = n, y = fora3),shape = "circle", size = 1.5L,colour = "red") +
+  labs(x = "Amostras", y = "dados") +
+  theme_classic()
+
+```
+
+# Exercício 2
+
+O gráfico masi apropriado para o número de defeitos por placa é o gráfico
+de controle para medidas individuais, visto que não temos informação sobre o 
+tamanho de cada amostra, apenas o número de itens defeituosos em cada uma. 
+
+Assim, com a Figura 5 com o gráfico de controle para medidas individuais, temos
+que as amostras estão dentro dos limites e não podemos perceber comportamento
+não aleatório, assim podemos dizer que o processo está sob controle.
+
+```{r}
+Dados<-data.frame(
+  Amostra=1:20,
+  Defeitos=c(4,2,1,3,0,4,5,3,2,2,1,2,2,3,1,4,3,2,1,3))
+Dados$AM<-c(NA,abs(diff(Dados$Defeitos)))
+```
+
+```{r,fig.cap="Gráfico de Controle: Médias Individuais."}
+# Medias individuais
+LM<-mean(Dados$Defeitos)
+LSC<-LM+(3*(mean(Dados$AM,na.rm = T)/1.128))
+LIC<-LM-(3*(mean(Dados$AM,na.rm = T)/1.128))
+#--------------------------------------------#
+# Amplitude móvel
+LM1<-mean(Dados$AM,na.rm = T)
+LSC1<-3.267*mean(Dados$AM,na.rm = T)
+LIC1<-0
+
+g_controle(vari = Dados$Defeitos,lsc = LSC,lic = LIC,lm = LM,laby = "Observações médias")
+```
+
+# Exercício 3
+
+## Letra a) Verifique as pressuposições do modelo de regressão. Qual sua conclusão?
+
+Os principais pressupostos do modelo de regressão são: Independência, 
+Homocedasticidade e Normalidade dos erros, o que pode ser garantido com testes
+estatísticos.
+
+## Letra b) Encontre a reta de regressão estimada. Escreva o modelo encontrado;
+```{r,include=FALSE}
+dados<-data.frame(
+  x=c(0.647,0.645,0.650,0.642,0.643,0.651,0.640,0.651,0.648,0.642,0.643,0.645,0.639,0.633,0.642,0.648,0.639,0.638,0.641,0.636,0.638,0.650,0.649,0.639,0.633,0.635),
+  y=c(0.430,0.42,0.44,0.43,0.42,0.46,0.43,0.44,0.43,0.42,0.41,0.41,0.40,0.39,0.40,0.42,0.40,0.40,0.41,0.39,0.39,0.42,0.43,0.40,0.39,0.39))
+
+mod<-lm(y~x,data=dados)
+summary(mod)
+```
+
+Considerando o p-valor como o valor padrão (5%), podemos considerar que pelo 
+teste T, rejeitamos $H_0$ e a estimativa do Teor de $Na_2O$ é significativa.
+
+$$ \hat{y} = -1.47 + 2.94 x$$
+
+\begin{table}[H]
+\caption{Métricas dada a  regressão linear estimda.}
+\centering 
+\begin{tabular}{lrrrrl}
+\hline
+  & Estimativa & Desvio Padrão & P-valor &\\
+\hline
+(Intercept) & -1.47 & 0.23  & $1.1e^{-06}$ & ***\\
+x & 2.94 & 0.36 &  $1.8e^{-08}$ & ***\\
+\hline
+\end{tabular}
+\end{table}
+
+```{r,fig.cap="Gráfico da reta de regressão ajustada."}
+Y=NULL
+for (i in 1:length(dados$x)) {
+  Y[i]= -1.4724 + 2.9360*dados$x[i]
+}
+dados$LM<-Y 
+ggplot(dados) +
+  geom_point(aes(x = x, y = y),shape = "circle", size = 1.5L,colour = "black") +
+  geom_line(aes(x = x, y = LM),size = 0.5, colour = "blue")+
+  labs(x = "x", y = "y") +
+  theme_classic()
+```
+
+## Letra c) Estabeleça os limites de controle o gráfico de regressão
+
+Utilizando o gráfico de controle de regressão para média, tem-se:
+
+```{r,fig.cap="Gráfico de controle de regressão."}
+n<-length(dados$x)
+Sxx<- sum(dados$x^2) - ((sum(dados$x)^2)/n)
+for (i in 1:n) {
+  LSC[i] = dados$LM[i]+3*sd(dados$x)*sqrt(1+(1/n)+((dados$x[i]-mean(dados$x))^2/Sxx))
+  LIC[i] = dados$LM[i]-3*sd(dados$x)*sqrt(1+(1/n)+((dados$x[i]-mean(dados$x))^2/Sxx))
+}
+
+dados<- dados |> 
+    mutate(fora=case_when(
+      y >= LSC | y <= LIC ~ y
+    ))
+ggplot(dados) +
+  geom_point(aes(x = x, y = y),shape = "circle", size = 1.5L,colour = "black") +
+  geom_line(aes(x = x, y = LM),size = 0.5, colour = "blue")+
+  geom_line(aes(x = x, y = LSC),size = 0.6, colour = "#333333")+
+  geom_line(aes(x = x, y = LIC),size = 0.6, colour = "#333333")+
+  geom_point(aes(x = x, y = fora),shape = "circle", size = 1.5L,colour = "red") +
+  labs(x = "x", y = "y") +
+  theme_classic()
+```
+
+## Letra d) Conclusão
+
+Observando a Figura 7, percebemos que tem-se 3 pontos fora dos limites, assim nem
+precisamos observar não aleatóriedade para concluir que o processo está 
+fora de controle.
+
+
+
+
